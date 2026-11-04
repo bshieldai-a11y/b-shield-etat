@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>État du service — B-SHIELD ONE</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#070a0d;--card:#10171d;--ink:#eef3f6;--muted:#9eabb5;--line:#27333c;--gold:#d9a52b;--ok:#5fd08a;--bad:#ff8a80;--warn:#e0b14a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:28px 16px 60px}
+.logo{font-size:12px;letter-spacing:.18em;font-weight:800;color:var(--gold)}
+h1{font-size:28px;margin:8px 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:0 0 14px;min-height:96px}
+.etat{display:flex;gap:14px;align-items:center;font-size:20px;font-weight:700}
+.point{width:16px;height:16px;border-radius:50%;background:var(--muted);flex:none}
+.ok .point{background:var(--ok)}.bad .point{background:var(--bad)}.attente .point{background:var(--warn)}
+.note{color:var(--muted);font-size:15px;margin:6px 0 0}
+.langues{display:flex;gap:6px;margin:0 0 6px}.langues button{font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 10px;cursor:pointer}
+.langues button[aria-pressed=true]{background:var(--gold);color:#1a1408;border-color:var(--gold)}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<main>
+  <div class="langues" role="group" aria-label="Langue / Language / Idioma">
+    <button type="button" data-l="fr">FR</button><button type="button" data-l="en">EN</button><button type="button" data-l="es">ES</button>
+  </div>
+  <div class="logo">B-SHIELD ONE</div>
+  <h1 id="titre">État du service</h1>
+  <section class="card attente" id="carte" aria-live="polite">
+    <div class="etat"><span class="point"></span><span id="etat">Vérification en cours…</span></div>
+    <p class="note" id="quand"></p>
+  </section>
+  <section class="card" id="incident" hidden>
+    <b id="t-incident">Message de l'équipe</b>
+    <p id="msg-incident"></p>
+    <p class="note" id="depuis"></p>
+  </section>
+  <section class="card">
+    <b id="t-aide">Si B-SHIELD ne répond pas</b>
+    <p id="aide">Ouvrez votre « trousse hors ligne » (téléchargée depuis le Calendrier) : vos publications prévues et leurs textes y sont, prêts à copier. Le Calendrier et la Bibliothèque restent lisibles sur l'appareil où vous les avez ouverts.</p>
+  </section>
+</main>
+<script>
+(function(){
+  var SANTE="https://b-shield-public-neh7aewdfa-nn.a.run.app/sante";
+  var T={
+    fr:{titre:"État du service",attente:"Vérification en cours…",ok:"B-SHIELD fonctionne",bad:"B-SHIELD ne répond pas en ce moment",
+        quand:"Vérifié à ",auto:" · nouvelle vérification chaque minute",ti:"Message de l'équipe",depuis:"Depuis : ",ta:"Si B-SHIELD ne répond pas",
+        aide:"Ouvrez votre « trousse hors ligne » (téléchargée depuis le Calendrier) : vos publications prévues et leurs textes y sont, prêts à copier. Le Calendrier et la Bibliothèque restent lisibles sur l'appareil où vous les avez ouverts."},
+    en:{titre:"Service status",attente:"Checking…",ok:"B-SHIELD is working",bad:"B-SHIELD is not responding right now",
+        quand:"Checked at ",auto:" · checked again every minute",ti:"Message from the team",depuis:"Since: ",ta:"If B-SHIELD is not responding",
+        aide:"Open your “offline kit” (downloaded from the Calendar): your scheduled posts and their texts are in it, ready to copy. The Calendar and the Library stay readable on the device where you opened them."},
+    es:{titre:"Estado del servicio",attente:"Verificando…",ok:"B-SHIELD funciona",bad:"B-SHIELD no responde en este momento",
+        quand:"Verificado a las ",auto:" · se verifica de nuevo cada minuto",ti:"Mensaje del equipo",depuis:"Desde: ",ta:"Si B-SHIELD no responde",
+        aide:"Abra su « kit sin conexión » (descargado desde el Calendario): allí están sus publicaciones programadas y sus textos, listos para copiar. El Calendario y la Biblioteca siguen legibles en el dispositivo donde los abrió."}
+  };
+  var $=function(i){return document.getElementById(i);}, lg="fr", etat="attente", vu=null, inc=null;
+  try{ var s=localStorage.getItem("bs-etat-langue"); if(T[s]) lg=s; else { var n=(navigator.language||"fr").slice(0,2); if(T[n]) lg=n; } }catch(e){}
+  function rendre(){
+    var t=T[lg]; document.documentElement.lang=lg; document.title=t.titre+" — B-SHIELD ONE";
+    $("titre").textContent=t.titre; $("t-incident").textContent=t.ti; $("t-aide").textContent=t.ta; $("aide").textContent=t.aide;
+    $("carte").className="card "+etat; $("etat").textContent=t[etat];
+    $("quand").textContent=vu?(t.quand+vu.toLocaleTimeString(lg)+t.auto):"";
+    if(inc&&inc.incident){ $("incident").hidden=false; $("msg-incident").textContent=inc["message_"+lg]||inc.message_fr||""; $("depuis").textContent=inc.depuis?(t.depuis+inc.depuis):""; }
+    else $("incident").hidden=true;
+    document.querySelectorAll(".langues button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.l===lg)); });
+  }
+  document.querySelectorAll(".langues button").forEach(function(b){ b.onclick=function(){ lg=b.dataset.l; try{localStorage.setItem("bs-etat-langue",lg);}catch(e){} rendre(); }; });
+  function verifier(){
+    var fin=new AbortController(), m=setTimeout(function(){ fin.abort(); },8000);
+    fetch(SANTE+"?t="+Date.now(),{cache:"no-store",signal:fin.signal}).then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ etat=(d&&d.ok===true)?"ok":"bad"; }).catch(function(){ etat="bad"; })
+      .finally(function(){ clearTimeout(m); vu=new Date(); rendre(); });
+    fetch("etat.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){ inc=d; rendre(); }).catch(function(){});
+  }
+  rendre(); verifier(); setInterval(verifier,60000);
+})();
+</script>
+</body>
+</html>
