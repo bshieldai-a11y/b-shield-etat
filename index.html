@@ -57,7 +57,7 @@ a{color:var(--gold)}
         aide:"Abra su « kit sin conexión » (descargado desde el Calendario): allí están sus publicaciones programadas y sus textos, listos para copiar. El Calendario y la Biblioteca siguen legibles en el dispositivo donde los abrió."}
   };
   var $=function(i){return document.getElementById(i);}, lg="fr", etat="attente", vu=null, inc=null;
-  try{ var s=localStorage.getItem("bs-etat-langue"); if(T[s]) lg=s; else { var n=(navigator.language||"fr").slice(0,2); if(T[n]) lg=n; } }catch(e){}
+  try{ var q=(new URLSearchParams(location.search).get("lang")||"").slice(0,2); var s=localStorage.getItem("bs-etat-langue"); if(T[q]) lg=q; else if(T[s]) lg=s; else { var n=(navigator.language||"fr").slice(0,2); if(T[n]) lg=n; } }catch(e){}  /* 5 nov. : la langue choisie dans B-SHIELD passe dans le lien (?lang=fr|en|es) et a priorité */
   function rendre(){
     var t=T[lg]; document.documentElement.lang=lg; document.title=t.titre+" — B-SHIELD ONE";
     $("titre").textContent=t.titre; $("t-incident").textContent=t.ti; $("t-aide").textContent=t.ta; $("aide").textContent=t.aide;
